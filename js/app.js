@@ -9,7 +9,6 @@ import { auth } from './auth.js';
 
 // DOM Elements
 const elements = {
-    themeToggle: document.getElementById('theme-toggle'),
     viewButtons: document.querySelectorAll('[data-view]'),
     views: document.querySelectorAll('.view'),
     taskList: document.getElementById('task-list'),
@@ -21,17 +20,27 @@ const elements = {
     signupForm: document.getElementById('signup-form'),
     showSignupBtn: document.getElementById('show-signup'),
     showLoginBtn: document.getElementById('show-login'),
-    logoutBtn: null // Will create dynamically or add to header
+    settingsBtn: document.getElementById('settings-btn'),
+    settingsModal: document.getElementById('settings-modal'),
+    settingsOverlay: document.getElementById('settings-overlay'),
+    closeSettingsBtn: document.getElementById('close-settings'),
+    themeBtns: document.querySelectorAll('[data-set-theme]'),
+    logoutBtnSettings: document.getElementById('logout-btn-settings')
 };
 
 // Initialization
 function init() {
     // Set initial theme
-    document.documentElement.setAttribute('data-theme', store.state.theme);
+    const savedTheme = localStorage.getItem('ge_theme') || 'day';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    store.setTheme(savedTheme); // Ensure store is synced
+    updateActiveThemeBtn(savedTheme);
 
     // Subscribe to state changes
     store.subscribe((state) => {
         renderTasks(state.tasks);
+        // Update active theme button if state changes elsewhere
+        if (state.theme) updateActiveThemeBtn(state.theme);
     });
 
     // Check Auth Status
@@ -71,13 +80,13 @@ function setupAuthListeners() {
     });
 
     // Login Submit
-    elements.loginForm.addEventListener('submit', (e) => {
+    elements.loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
 
         try {
-            auth.login(email, password);
+            await auth.login(email, password);
             elements.authView.classList.add('hidden');
             initializeAppContent();
         } catch (err) {
@@ -86,14 +95,14 @@ function setupAuthListeners() {
     });
 
     // Signup Submit
-    elements.signupForm.addEventListener('submit', (e) => {
+    elements.signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('signup-name').value;
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
 
         try {
-            auth.signup(email, password, name);
+            await auth.signup(email, password, name);
             elements.authView.classList.add('hidden');
             initializeAppContent();
             alert('Welcome ' + name + '!');
@@ -104,35 +113,39 @@ function setupAuthListeners() {
 }
 
 function setupEventListeners() {
-    // Theme Toggle
-    elements.themeToggle.addEventListener('click', () => {
-        const themes = ['day', 'sunset', 'night'];
-        const currentIdx = themes.indexOf(store.state.theme);
-        const nextTheme = themes[(currentIdx + 1) % themes.length];
-        store.setTheme(nextTheme);
+    // Settings Logic
+    function toggleSettings(show) {
+        if (show) {
+            elements.settingsModal.classList.remove('hidden');
+            elements.settingsOverlay.classList.remove('hidden');
+        } else {
+            elements.settingsModal.classList.add('hidden');
+            elements.settingsOverlay.classList.add('hidden');
+        }
+    }
+
+    elements.settingsBtn.addEventListener('click', () => toggleSettings(true));
+    elements.closeSettingsBtn.addEventListener('click', () => toggleSettings(false));
+    elements.settingsOverlay.addEventListener('click', () => toggleSettings(false));
+
+    // Theme Selection
+    elements.themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const theme = btn.dataset.setTheme;
+            store.setTheme(theme);
+            updateActiveThemeBtn(theme);
+        });
     });
 
-    // Add Logout Button to Header (if not exists)
-    if (!document.getElementById('logout-btn')) {
-        const controls = document.querySelector('.controls');
-        const logoutBtn = document.createElement('button');
-        logoutBtn.id = 'logout-btn';
-        logoutBtn.className = 'icon-btn';
-        logoutBtn.innerHTML = '<span class="icon">⏻</span>'; // Power icon
-        logoutBtn.title = 'Logout';
-        logoutBtn.style.marginLeft = '0.5rem';
-
-        logoutBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to log out?')) {
-                auth.logout();
-                elements.authView.classList.remove('hidden');
-                // Optional: Clear UI sensitive data if needed, but reloading is safer to reset state
-                window.location.reload();
-            }
-        });
-
-        controls.prepend(logoutBtn);
-    }
+    // Logout from Settings
+    elements.logoutBtnSettings.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to log out?')) {
+            await auth.logout();
+            toggleSettings(false);
+            elements.authView.classList.remove('hidden');
+            window.location.reload();
+        }
+    });
 
     // Navigation
     elements.viewButtons.forEach(btn => {
@@ -218,6 +231,16 @@ function switchView(viewName) {
         activeView.classList.remove('hidden');
         activeView.classList.add('active');
     }
+}
+
+function updateActiveThemeBtn(theme) {
+    elements.themeBtns.forEach(btn => {
+        if (btn.dataset.setTheme === theme) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 }
 
 // Start App
