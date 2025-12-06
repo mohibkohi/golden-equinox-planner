@@ -147,6 +147,20 @@ function setupEventListeners() {
         }
     });
 
+    // Password Visibility Toggle
+    document.querySelectorAll('.password-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            const input = document.getElementById(targetId);
+            if (input) {
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                // Update icon (optional: simpler to just keep eye, but could swap slashed eye)
+                btn.querySelector('.icon').textContent = type === 'password' ? '👁️' : '🔒';
+            }
+        });
+    });
+
     // Navigation
     elements.viewButtons.forEach(btn => {
         btn.addEventListener('click', () => {
