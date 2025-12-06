@@ -1,11 +1,13 @@
 /**
- * Authentication Module
- * Handles local user management using localStorage
+ * Authentication Module (Firebase)
+ * Handles user management using Firebase Auth
  */
+
+import { auth as firebaseAuth } from './firebaseConfig.js';
 
 export const auth = {
     state: {
-        currentUser: JSON.parse(localStorage.getItem('ge_user')) || null
+        currentUser: null
     },
 
     listeners: [],
@@ -26,32 +28,45 @@ export const auth = {
     },
 
     /**
+     * Initialize Auth Listener
+     */
+    init() {
+        if (!firebaseAuth) return;
+
+        firebaseAuth.onAuthStateChanged(user => {
+            if (user) {
+                this.state.currentUser = {
+                    id: user.uid,
+                    email: user.email,
+                    name: user.displayName || user.email.split('@')[0]
+                };
+            } else {
+                this.state.currentUser = null;
+            }
+            this.notify();
+        });
+    },
+
+    /**
      * Register a new user
      * @param {string} email 
      * @param {string} password 
      * @param {string} name 
      */
-    signup(email, password, name) {
-        const users = JSON.parse(localStorage.getItem('ge_users')) || [];
+    async signup(email, password, name) {
+        if (!firebaseAuth) throw new Error("Firebase not initialized. Check config.");
 
-        if (users.find(u => u.email === email)) {
-            throw new Error('User already exists');
+        try {
+            const userCredential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
+            // Update profile with name
+            await userCredential.user.updateProfile({
+                displayName: name
+            });
+            return userCredential.user;
+        } catch (error) {
+            console.error("Signup Error:", error);
+            throw error;
         }
-
-        const newUser = {
-            id: 'user_' + Date.now(),
-            email,
-            password, // In a real app, never store plain text passwords!
-            name,
-            createdAt: new Date().toISOString()
-        };
-
-        users.push(newUser);
-        localStorage.setItem('ge_users', JSON.stringify(users));
-
-        // Auto login
-        this.login(email, password);
-        return newUser;
     },
 
     /**
@@ -59,31 +74,28 @@ export const auth = {
      * @param {string} email 
      * @param {string} password 
      */
-    login(email, password) {
-        const users = JSON.parse(localStorage.getItem('ge_users')) || [];
-        const user = users.find(u => u.email === email && u.password === password);
+    async login(email, password) {
+        if (!firebaseAuth) throw new Error("Firebase not initialized. Check config.");
 
-        if (!user) {
-            throw new Error('Invalid credentials');
+        try {
+            const userCredential = await firebaseAuth.signInWithEmailAndPassword(email, password);
+            return userCredential.user;
+        } catch (error) {
+            console.error("Login Error:", error);
+            throw error;
         }
-
-        // Create session user (exclude password)
-        const sessionUser = { ...user };
-        delete sessionUser.password;
-
-        this.state.currentUser = sessionUser;
-        localStorage.setItem('ge_user', JSON.stringify(sessionUser));
-        this.notify();
-        return sessionUser;
     },
 
     /**
      * Log out current user
      */
-    logout() {
-        this.state.currentUser = null;
-        localStorage.removeItem('ge_user');
-        this.notify();
+    async logout() {
+        if (!firebaseAuth) return;
+        try {
+            await firebaseAuth.signOut();
+        } catch (error) {
+            console.error("Logout Error:", error);
+        }
     },
 
     /**
@@ -93,3 +105,6 @@ export const auth = {
         return !!this.state.currentUser;
     }
 };
+
+// Initialize listener immediately
+auth.init();
