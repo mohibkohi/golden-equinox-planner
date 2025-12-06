@@ -1,5 +1,6 @@
-import { db } from './firebaseConfig.js';
+```javascript
 import { auth } from './auth.js';
+import { utils } from './utils.js';
 
 class Store {
     constructor() {
@@ -9,15 +10,15 @@ class Store {
             user: null
         };
         this.listeners = [];
-        this.unsubscribe = null;
 
         // Listen for Auth Changes to sync data
         auth.subscribe(user => {
             this.state.user = user;
             if (user) {
-                this.initDataSync(user.id);
+                this.loadTasks(user.id);
             } else {
-                this.clearData();
+                this.state.tasks = [];
+                this.notify();
             }
         });
     }
@@ -33,95 +34,69 @@ class Store {
         this.listeners.forEach(listener => listener(this.state));
     }
 
-    // Real-time Data Sync
-    initDataSync(userId) {
-        if (!db) return; // Guard if SDK not loaded
-
-        if (this.unsubscribe) {
-            this.unsubscribe();
-        }
-
-        // Subscribe to tasks collection
-        this.unsubscribe = db.collection('users').doc(userId).collection('tasks')
-            .orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
-                const tasks = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                this.state.tasks = tasks;
-                this.notify();
-            }, error => {
-                console.error("Data Sync Error:", error);
-            });
+    // Local Data Sync
+    loadTasks(userId) {
+        const key = `ge_tasks_${ userId } `;
+        this.state.tasks = JSON.parse(localStorage.getItem(key)) || [];
+        this.notify();
     }
 
-    clearData() {
-        if (this.unsubscribe) {
-            this.unsubscribe();
-            this.unsubscribe = null;
-        }
-        this.state.tasks = [];
+    save() {
+        if (!this.state.user) return;
+        const key = `ge_tasks_${ this.state.user.id } `;
+        localStorage.setItem(key, JSON.stringify(this.state.tasks));
+        
+        // Also save theme globally
+        localStorage.setItem('ge_theme', this.state.theme);
         this.notify();
     }
 
     // Actions
-    async addTask(text) {
-        if (!this.state.user || !db) return;
+    addTask(text) {
+        if (!this.state.user) return;
 
         const newTask = {
+            id: utils.generateId(),
             text,
             completed: false,
             createdAt: new Date().toISOString()
         };
 
-        try {
-            await db.collection('users').doc(this.state.user.id).collection('tasks').add(newTask);
-        } catch (error) {
-            console.error("Error adding task:", error);
-        }
+        this.state.tasks = [newTask, ...this.state.tasks];
+        this.save();
     }
 
-    async toggleTask(id) {
-        if (!this.state.user || !db) return;
-
-        const task = this.state.tasks.find(t => t.id === id);
-        if (!task) return;
-
-        try {
-            await db.collection('users').doc(this.state.user.id).collection('tasks').doc(id).update({
-                completed: !task.completed
-            });
-        } catch (error) {
-            console.error("Error toggling task:", error);
-        }
+    toggleTask(id) {
+        if (!this.state.user) return;
+        
+        this.state.tasks = this.state.tasks.map(t =>
+            t.id === id ? { ...t, completed: !t.completed } : t
+        );
+        this.save();
     }
 
-    async updateTask(id, updates) {
-        if (!this.state.user || !db) return;
+    updateTask(id, updates) {
+        if (!this.state.user) return;
 
-        try {
-            await db.collection('users').doc(this.state.user.id).collection('tasks').doc(id).update(updates);
-        } catch (error) {
-            console.error("Error updating task:", error);
-        }
+        this.state.tasks = this.state.tasks.map(t =>
+            t.id === id ? { ...t, ...updates } : t
+        );
+        this.save();
     }
 
-    async deleteTask(id) {
-        if (!this.state.user || !db) return;
+    deleteTask(id) {
+        if (!this.state.user) return;
 
-        try {
-            await db.collection('users').doc(this.state.user.id).collection('tasks').doc(id).delete();
-        } catch (error) {
-            console.error("Error deleting task:", error);
-        }
+        this.state.tasks = this.state.tasks.filter(t => t.id !== id);
+        this.save();
     }
 
     setTheme(theme) {
         this.state.theme = theme;
         document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('ge_theme', theme); // Keep theme local for now
+        localStorage.setItem('ge_theme', theme);
     }
 }
 
 export const store = new Store();
+```

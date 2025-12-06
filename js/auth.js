@@ -1,13 +1,11 @@
 /**
- * Authentication Module (Firebase)
- * Handles user management using Firebase Auth
+ * Authentication Module (Local)
+ * Handles user management using localStorage
  */
-
-import { auth as firebaseAuth } from './firebaseConfig.js';
 
 export const auth = {
     state: {
-        currentUser: null
+        currentUser: JSON.parse(localStorage.getItem('ge_user')) || null
     },
 
     listeners: [],
@@ -28,23 +26,11 @@ export const auth = {
     },
 
     /**
-     * Initialize Auth Listener
+     * Initialize (Mock for consistency with Firebase interface)
      */
     init() {
-        if (!firebaseAuth) return;
-
-        firebaseAuth.onAuthStateChanged(user => {
-            if (user) {
-                this.state.currentUser = {
-                    id: user.uid,
-                    email: user.email,
-                    name: user.displayName || user.email.split('@')[0]
-                };
-            } else {
-                this.state.currentUser = null;
-            }
-            this.notify();
-        });
+        // No-op for local
+        this.notify();
     },
 
     /**
@@ -54,19 +40,29 @@ export const auth = {
      * @param {string} name 
      */
     async signup(email, password, name) {
-        if (!firebaseAuth) throw new Error("Firebase not initialized. Check config.");
+        // Simulate async
+        return new Promise((resolve, reject) => {
+            const users = JSON.parse(localStorage.getItem('ge_users')) || [];
 
-        try {
-            const userCredential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
-            // Update profile with name
-            await userCredential.user.updateProfile({
-                displayName: name
-            });
-            return userCredential.user;
-        } catch (error) {
-            console.error("Signup Error:", error);
-            throw error;
-        }
+            if (users.find(u => u.email === email)) {
+                reject(new Error('User already exists'));
+                return;
+            }
+
+            const newUser = {
+                id: 'user_' + Date.now(),
+                email,
+                password, // Mock: In real app use encryption
+                name,
+                createdAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('ge_users', JSON.stringify(users));
+
+            // Auto login
+            this.login(email, password).then(resolve).catch(reject);
+        });
     },
 
     /**
@@ -75,27 +71,34 @@ export const auth = {
      * @param {string} password 
      */
     async login(email, password) {
-        if (!firebaseAuth) throw new Error("Firebase not initialized. Check config.");
+        return new Promise((resolve, reject) => {
+            const users = JSON.parse(localStorage.getItem('ge_users')) || [];
+            const user = users.find(u => u.email === email && u.password === password);
 
-        try {
-            const userCredential = await firebaseAuth.signInWithEmailAndPassword(email, password);
-            return userCredential.user;
-        } catch (error) {
-            console.error("Login Error:", error);
-            throw error;
-        }
+            if (!user) {
+                reject(new Error('Invalid credentials'));
+                return;
+            }
+
+            // Create session user
+            const sessionUser = { ...user };
+            delete sessionUser.password;
+
+            this.state.currentUser = sessionUser;
+            localStorage.setItem('ge_user', JSON.stringify(sessionUser));
+            this.notify();
+            resolve(sessionUser);
+        });
     },
 
     /**
      * Log out current user
      */
     async logout() {
-        if (!firebaseAuth) return;
-        try {
-            await firebaseAuth.signOut();
-        } catch (error) {
-            console.error("Logout Error:", error);
-        }
+        this.state.currentUser = null;
+        localStorage.removeItem('ge_user');
+        this.notify();
+        return Promise.resolve();
     },
 
     /**
