@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Equinox | Premium Planner (Offline)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* Typography */
+            --font-heading: 'Playfair Display', serif;
+            --font-body: 'Outfit', sans-serif;
+
+            /* Theme: Day (Default) */
+            --bg-app: #fdfbf7;
+            --bg-panel: #ffffff;
+            --text-main: #2d2d2d;
+            --text-muted: #6e6e6e;
+            --accent-primary: #d4a373;
+            /* Golden Sand */
+            --accent-secondary: #e9edc9;
+            /* Sage */
+            --border-subtle: #e0e0e0;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="sunset"] {
+            --bg-app: #fff4e6;
+            --bg-panel: #fff9f2;
+            --text-main: #4a3b32;
+            --accent-primary: #ff8c61;
+        }
+
+        [data-theme="night"] {
+            --bg-app: #121212;
+            --bg-panel: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent-primary: #ffd700;
+            --border-subtle: #333333;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-body), system-ui, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            transition: background-color 0.5s ease, color 0.5s ease;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* Header */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+            background-color: var(--bg-panel);
+        }
+
+        .app-header h1 {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            padding: 2rem;
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: var(--bg-panel);
+        }
+
+        .nav-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background-color: var(--bg-app);
+            color: var(--text-main);
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .view {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Components */
+        .btn-primary {
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 4rem;
+        }
+
+        /* Command Bar (Start hidden) */
+        .command-bar-dialog {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            border: none;
+            border-radius: 12px;
+            background: var(--bg-panel);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 0;
+        }
+
+        .command-bar-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
+        }
+
+        .command-input-wrapper {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .cmd-icon {
+            font-size: 1.2rem;
+            color: var(--accent-primary);
+            margin-right: 1rem;
+            font-weight: bold;
+        }
+
+        #cmd-input {
+            flex: 1;
+            border: none;
+            background: none;
+            font-size: 1.2rem;
+            color: var(--text-main);
+            outline: none;
+            font-family: var(--font-body);
+        }
+
+        .command-hints {
+            padding: 0.75rem 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            background: var(--bg-app);
+        }
+
+        /* Focus/Zen Mode Overlay Styles */
+        .focus-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-app);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <header class="app-header">
+            <div class="logo">
+                <h1>Golden Equinox</h1>
+            </div>
+            <div class="controls">
+                <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme"
+                    style="background:none; border:none; font-size:1.5rem; cursor:pointer;">
+                    <span class="icon">☀</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-layout">
+            <aside class="sidebar">
+                <nav class="nav-links">
+                    <button class="nav-item active" data-view="tasks">Tasks</button>
+                    <button class="nav-item" data-view="calendar">Calendar</button>
+                    <button class="nav-item" data-view="analytics">Analytics</button>
+                </nav>
+                <div class="focus-control">
+                    <button id="start-focus" class="btn-primary">Focus Mode</button>
+                </div>
+            </aside>
+
+            <section id="content-area" class="content-area">
+                <!-- Views will be injected here -->
+                <div id="view-tasks" class="view active">
+                    <div class="toolbar">
+                        <h2>My Tasks</h2>
+                        <button id="add-task-btn" class="btn-primary">+ New Task</button>
+                    </div>
+                    <div class="task-list" id="task-list">
+                        <!-- Tasks go here -->
+                        <div class="empty-state">No tasks yet. Press Cmd+K or click + New Task.</div>
+                    </div>
+                </div>
+
+                <div id="view-calendar" class="view hidden">
+                    <div class="calendar-header"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <button id="prev-month"
+                            style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&lt;</button>
+                        <h2 id="calendar-title">December 2025</h2>
+                        <button id="next-month"
+                            style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&gt;</button>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- Calendar days -->
+                    </div>
+                </div>
+
+                <div id="view-analytics" class="view hidden">
+                    <h2>Life Balance Analytics</h2>
+                    <div class="analytics-dashboard" id="analytics-dashboard" style="margin-top: 2rem;">
+                        <!-- Charts go here -->
+                        <p>Loading stats...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Command Bar Modal -->
+        <dialog id="command-bar" class="command-bar-dialog">
+            <div class="command-input-wrapper">
+                <span class="cmd-icon">&gt;</span>
+                <input type="text" id="cmd-input" placeholder="Type a command or task..." autocomplete="off">
+            </div>
+            <div class="command-hints">
+                <span>Try: "Meeting with team tmrw 2pm"</span>
+            </div>
+        </dialog>
+    </div>
+
+    <script>
+        /*********** UTILS ***********/
+        const utils = {
+            generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            },
+            formatDate(date) {
+                return new Intl.DateTimeFormat('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }).format(date);
+            },
+            getGreeting() {
+                const hour = new Date().getHours();
+                if (hour < 12) return "Good morning";
+                if (hour < 18) return "Good afternoon";
+                return "Good evening";
+            }
+        };
+
+        /*********** STORE ***********/
+        class Store {
+            constructor() {
+                this.state = {
+                    tasks: JSON.parse(localStorage.getItem('ge_tasks')) || [],
+                    theme: localStorage.getItem('ge_theme') || 'day',
+                    user: { name: 'Creator' }
+                };
+                this.listeners = [];
+            }
+
+            subscribe(listener) {
+                this.listeners.push(listener);
+                return () => {
+                    this.listeners = this.listeners.filter(l => l !== listener);
+                };
+            }
+
+            notify() {
+                this.listeners.forEach(listener => listener(this.state));
+            }
+
+            addTask(text) {
+                const newTask = {
+                    id: utils.generateId(),
+                    text,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    scheduledTime: null
+                };
+                this.state.tasks = [newTask, ...this.state.tasks];
+                this.save();
+            }
+
+            toggleTask(id) {
+                this.state.tasks = this.state.tasks.map(t =>
+                    t.id === id ? { ...t, completed: !t.completed } : t
+                );
+                this.save();
+            }
+
+            updateTask(id, updates) {
+                this.state.tasks = this.state.tasks.map(t =>
+                    t.id === id ? { ...t, ...updates } : t
+                );
+                this.save();
+            }
+
+            deleteTask(id) {
+                this.state.tasks = this.state.tasks.filter(t => t.id !== id);
+                this.save();
+            }
+
+            setTheme(theme) {
+                this.state.theme = theme;
+                document.documentElement.setAttribute('data-theme', theme);
+                this.save();
+            }
+
+            save() {
+                localStorage.setItem('ge_tasks', JSON.stringify(this.state.tasks));
+                localStorage.setItem('ge_theme', this.state.theme);
+                this.notify();
+            }
+        }
+        const store = new Store();
+
+        /*********** CALENDAR ***********/
+        const calendar = {
+            currentDate: new Date(),
+
+            init() {
+                this.render();
+                // Defer listeners to init to ensure DOM exists
+                store.subscribe(() => this.render());
+            },
+
+            setupListeners() {
+                // Ensure elements exist before adding listeners in bundled version
+                const prev = document.getElementById('prev-month');
+                const next = document.getElementById('next-month');
+                if (prev) prev.addEventListener('click', () => {
+                    this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+                    this.render();
+                });
+                if (next) next.addEventListener('click', () => {
+                    this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+                    this.render();
+                });
+            },
+
+            render() {
+                const grid = document.getElementById('calendar-grid');
+                const title = document.getElementById('calendar-title');
+                if (!grid || !title) return;
+
+                title.textContent = new Intl.DateTimeFormat('en-US', {
+                    month: 'long',
+                    year: 'numeric'
+                }).format(this.currentDate);
+
+                grid.innerHTML = '';
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                grid.style.gap = '10px';
+
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                days.forEach(day => {
+                    const header = document.createElement('div');
+                    header.textContent = day;
+                    header.style.textAlign = 'center';
+                    header.style.fontWeight = 'bold';
+                    header.style.color = 'var(--text-muted)';
+                    header.style.padding = '0.5rem';
+                    grid.appendChild(header);
+                });
+
+                const year = this.currentDate.getFullYear();
+                const month = this.currentDate.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                for (let i = 0; i < firstDay; i++) {
+                    const empty = document.createElement('div');
+                    grid.appendChild(empty);
+                }
+
+                const today = new Date();
+                const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'calendar-day';
+                    dayEl.textContent = d;
+                    dayEl.style.border = '1px solid var(--border-subtle)';
+                    dayEl.style.padding = '0.5rem';
+                    dayEl.style.minHeight = '80px';
+                    dayEl.style.borderRadius = '8px';
+                    dayEl.style.backgroundColor = 'var(--bg-panel)';
+
+                    if (isCurrentMonth && d === today.getDate()) {
+                        dayEl.style.border = '2px solid var(--accent-primary)';
+                        dayEl.style.fontWeight = 'bold';
+                    }
+
+                    // Render Dots for Tasks
+                    const tasksFoDay = store.state.tasks.filter(t => {
+                        if (!t.scheduledTime) return false;
+                        const taskDate = new Date(t.scheduledTime);
+                        return taskDate.getDate() === d &&
+                            taskDate.getMonth() === month &&
+                            taskDate.getFullYear() === year;
+                    });
+
+                    if (tasksFoDay.length > 0) {
+                        const dots = document.createElement('div');
+                        dots.style.display = 'flex';
+                        dots.style.gap = '4px';
+                        dots.style.marginTop = '4px';
+                        dots.style.flexWrap = 'wrap';
+
+                        tasksFoDay.forEach(t => {
+                            const dot = document.createElement('div');
+                            dot.style.width = '6px';
+                            dot.style.height = '6px';
+                            dot.style.borderRadius = '50%';
+                            dot.style.backgroundColor = t.completed ? 'var(--text-muted)' : 'var(--accent-primary)';
+                            dot.title = t.text;
+                            dots.appendChild(dot);
+                        });
+                        dayEl.appendChild(dots);
+                    }
+
+                    grid.appendChild(dayEl);
+                }
+            }
+        };
+
+        /*********** SCHEDULER ***********/
+        const scheduler = {
+            init() {
+                // Attach to View Tasks toolbar
+                const toolbar = document.querySelector('#view-tasks .toolbar');
+                if (toolbar && !document.getElementById('auto-schedule-btn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'auto-schedule-btn';
+                    btn.textContent = '✨ Auto Schedule';
+                    btn.className = 'btn-primary';
+                    btn.style.marginLeft = '10px';
+                    btn.style.background = 'var(--text-main)';
+                    btn.addEventListener('click', () => this.runSchedule());
+                    toolbar.appendChild(btn);
+                }
+            },
+            runSchedule() {
+                const tasks = store.state.tasks.filter(t => !t.completed && !t.scheduledTime);
+                if (tasks.length === 0) {
+                    alert("No unscheduled tasks to organize!");
+                    return;
+                }
+                const scheduleDate = new Date();
+                scheduleDate.setDate(scheduleDate.getDate() + 1);
+                scheduleDate.setHours(9, 0, 0, 0);
+
+                tasks.forEach(task => {
+                    const timeString = scheduleDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    if (!task.text.includes('at ')) {
+                        const taskIndex = store.state.tasks.findIndex(t => t.id === task.id);
+                        if (taskIndex !== -1) {
+                            store.state.tasks[taskIndex].text = `${task.text} at ${timeString}`;
+                            store.state.tasks[taskIndex].scheduledTime = scheduleDate.toISOString();
+                        }
+                    }
+                    scheduleDate.setHours(scheduleDate.getHours() + 1);
+                });
+                store.save();
+                alert(`✨ AI has scheduled ` + tasks.length + ` tasks for you starting tomorrow!`);
+            }
+        };
+
+        /*********** ANALYTICS ***********/
+        const analytics = {
+            init() {
+                this.render();
+                store.subscribe(() => this.render());
+            },
+            render() {
+                const dashboard = document.getElementById('analytics-dashboard');
+                if (!dashboard) return;
+                const tasks = store.state.tasks;
+                const total = tasks.length;
+                const completed = tasks.filter(t => t.completed).length;
+
+                if (total === 0) {
+                    dashboard.innerHTML = '<p class="empty-state">No data to analyze yet.</p>';
+                    return;
+                }
+                const completionRate = Math.round((completed / total) * 100);
+
+                dashboard.innerHTML = `
+                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                        <div class="stat-card" style="background: var(--bg-panel); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-soft);">
+                            <h3 style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">Completion Rate</h3>
+                            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent-primary);">${completionRate}%</div>
+                        </div>
+                        <div class="stat-card" style="background: var(--bg-panel); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-soft);">
+                            <h3 style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">Tasks Completed</h3>
+                            <div style="font-size: 2.5rem; font-weight: bold;">${completed}/${total}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        /*********** FOCUS MODE ***********/
+        const focusMode = {
+            isActive: false,
+            timerInterval: null,
+            timeLeft: 25 * 60,
+            overlay: null,
+
+            init() {
+                const startBtn = document.getElementById('start-focus');
+                if (startBtn) {
+                    // remove old listeners to be safe? no, just add new one
+                    startBtn.addEventListener('click', () => this.start());
+                }
+            },
+            start() {
+                if (this.isActive) return;
+                this.isActive = true;
+                const currentTask = store.state.tasks.find(t => !t.completed) || { text: "Focus on your work" };
+                this.createOverlay(currentTask.text);
+                this.startTimer();
+            },
+            stop() {
+                this.isActive = false;
+                clearInterval(this.timerInterval);
+                this.timeLeft = 25 * 60;
+                if (this.overlay) {
+                    this.overlay.remove();
+                    this.overlay = null;
+                }
+            },
+            createOverlay(taskText) {
+                this.overlay = document.createElement('div');
+                this.overlay.className = 'focus-overlay';
+                this.overlay.innerHTML = `
+                    <h1 style="font-size: 3rem; margin-bottom: 2rem; text-align:center;">${taskText}</h1>
+                    <div id="focus-timer" style="font-size: 6rem; font-family: monospace; font-weight: bold; margin-bottom: 3rem; color: var(--accent-primary);">25:00</div>
+                    <button id="stop-focus" class="btn-primary" style="background: transparent; border: 2px solid var(--text-main); color: var(--text-main);">Stop Focus</button>
+                `;
+                document.body.appendChild(this.overlay);
+                document.getElementById('stop-focus').addEventListener('click', () => this.stop());
+            },
+            startTimer() {
+                const timerDisplay = document.getElementById('focus-timer');
+                this.timerInterval = setInterval(() => {
+                    this.timeLeft--;
+                    const minutes = Math.floor(this.timeLeft / 60);
+                    const seconds = this.timeLeft % 60;
+                    if (timerDisplay) timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    if (this.timeLeft <= 0) {
+                        this.stop();
+                        alert("Focus session complete!");
+                    }
+                }, 1000);
+            }
+        };
+
+        /*********** COMMAND BAR ***********/
+        const commandBar = {
+            dialog: null,
+            input: null,
+            init() {
+                this.dialog = document.getElementById('command-bar');
+                this.input = document.getElementById('cmd-input');
+                if (!this.dialog || !this.input) return;
+                this.setupListeners();
+            },
+            setupListeners() {
+                document.addEventListener('keydown', (e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                        e.preventDefault();
+                        this.toggle();
+                    }
+                });
+                this.dialog.addEventListener('click', (e) => {
+                    if (e.target === this.dialog) this.close();
+                });
+                this.input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && this.input.value.trim()) {
+                        this.processCommand(this.input.value.trim());
+                        this.input.value = '';
+                        this.close();
+                    }
+                    if (e.key === 'Escape') this.close();
+                });
+            },
+            toggle() {
+                this.dialog.open ? this.close() : this.dialog.showModal();
+            },
+            close() {
+                this.dialog.close();
+            },
+            processCommand(text) {
+                const lower = text.toLowerCase();
+                if (lower.startsWith('theme ')) {
+                    const theme = lower.replace('theme ', '').trim();
+                    if (['day', 'sunset', 'night'].includes(theme)) {
+                        store.setTheme(theme);
+                        return;
+                    }
+                }
+                store.addTask(text);
+            }
+        };
+
+        /*********** APP INIT ***********/
+        const elements = {
+            themeToggle: document.getElementById('theme-toggle'),
+            viewButtons: document.querySelectorAll('[data-view]'),
+            views: document.querySelectorAll('.view'),
+            taskList: document.getElementById('task-list'),
+            addTaskBtn: document.getElementById('add-task-btn'),
+            cmdDialog: document.getElementById('command-bar'),
+        };
+
+        function setupEventListeners() {
+            elements.themeToggle.addEventListener('click', () => {
+                const themes = ['day', 'sunset', 'night'];
+                const currentIdx = themes.indexOf(store.state.theme);
+                const nextTheme = themes[(currentIdx + 1) % themes.length];
+                store.setTheme(nextTheme);
+            });
+
+            elements.viewButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const viewName = btn.dataset.view;
+                    switchView(viewName);
+                });
+            });
+
+            elements.addTaskBtn.addEventListener('click', () => {
+                const text = prompt("What needs to be done?");
+                if (text) store.addTask(text);
+            });
+        }
+
+        function renderTasks(tasks) {
+            elements.taskList.innerHTML = '';
+            if (tasks.length === 0) {
+                elements.taskList.innerHTML = '<div class="empty-state">No tasks yet.</div>';
+                return;
+            }
+            tasks.forEach(task => {
+                const el = document.createElement('div');
+                el.className = `task-item ${task.completed ? 'completed' : ''}`;
+                el.style.padding = '1rem';
+                el.style.borderBottom = '1px solid var(--border-subtle)';
+                el.style.display = 'flex';
+                el.style.alignItems = 'center';
+                el.style.gap = '1rem';
+                el.innerHTML = `
+                    <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                    <span style="flex:1; text-decoration: ${task.completed ? 'line-through' : 'none'}">${task.text}</span>
+                    <input type="date" class="task-date-picker" value="${task.scheduledTime ? task.scheduledTime.split('T')[0] : ''}" style="border: 1px solid var(--border-subtle); padding: 4px; border-radius: 4px; font-family: inherit; color: var(--text-muted);">
+                    <button class="delete-btn" style="color:red; border:none; background:none; cursor:pointer;">&times;</button>
+                `;
+                el.querySelector('input[type="checkbox"]').addEventListener('change', () => store.toggleTask(task.id));
+                el.querySelector('.task-date-picker').addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        const date = new Date(e.target.value);
+                        date.setHours(9, 0, 0, 0);
+                        store.updateTask(task.id, { scheduledTime: date.toISOString() });
+                    } else {
+                        store.updateTask(task.id, { scheduledTime: null });
+                    }
+                });
+                el.querySelector('.delete-btn').addEventListener('click', () => store.deleteTask(task.id));
+                elements.taskList.appendChild(el);
+            });
+        }
+
+        function switchView(viewName) {
+            elements.viewButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === viewName));
+            elements.views.forEach(view => {
+                view.classList.remove('active');
+                view.classList.add('hidden');
+            });
+            const activeView = document.getElementById(`view-${viewName}`);
+            if (activeView) {
+                activeView.classList.remove('hidden');
+                activeView.classList.add('active');
+            }
+        }
+
+        function init() {
+            document.documentElement.setAttribute('data-theme', store.state.theme);
+            store.subscribe((state) => renderTasks(state.tasks));
+            renderTasks(store.state.tasks);
+
+            calendar.init();
+            calendar.setupListeners(); // Call manually as bundled
+
+            commandBar.init();
+            focusMode.init();
+            scheduler.init();
+            analytics.init();
+            setupEventListeners();
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+
+</html>

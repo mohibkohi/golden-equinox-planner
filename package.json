@@ -1,0 +1,16 @@
+{
+    "name": "golden-equinox-planner",
+    "version": "1.0.0",
+    "description": "Premium Planner Web Application",
+    "scripts": {
+        "start": "npx serve .",
+        "build": "echo 'No build step required for static site'"
+    },
+    "keywords": [
+        "planner",
+        "productivity",
+        "static-site"
+    ],
+    "author": "",
+    "license": "ISC"
+}

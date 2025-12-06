@@ -1,0 +1,207 @@
+:root {
+    /* Typography */
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Outfit', sans-serif;
+
+    /* Theme: Day (Default) */
+    --bg-app: #fdfbf7;
+    --bg-panel: #ffffff;
+    --text-main: #2d2d2d;
+    --text-muted: #6e6e6e;
+    --accent-primary: #d4a373; /* Golden Sand */
+    --accent-secondary: #e9edc9; /* Sage */
+    --border-subtle: #e0e0e0;
+    --shadow-soft: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+[data-theme="sunset"] {
+    --bg-app: #fff4e6;
+    --bg-panel: #fff9f2;
+    --text-main: #4a3b32;
+    --accent-primary: #ff8c61;
+}
+
+[data-theme="night"] {
+    --bg-app: #121212;
+    --bg-panel: #1e1e1e;
+    --text-main: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --accent-primary: #ffd700;
+    --border-subtle: #333333;
+    --shadow-soft: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: --font-body, system-ui, sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    transition: background-color 0.5s ease, color 0.5s ease;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Header */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border-subtle);
+    background-color: var(--bg-panel);
+}
+
+.app-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--accent-primary);
+}
+
+/* Main Layout */
+.main-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 250px;
+    padding: 2rem;
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: var(--bg-panel);
+}
+
+.nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+}
+
+.nav-item:hover, .nav-item.active {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+}
+
+.content-area {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    position: relative;
+}
+
+.view {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.view.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Components */
+.btn-primary {
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    margin-top: 4rem;
+}
+
+/* Command Bar (Start hidden) */
+.command-bar-dialog {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    border: none;
+    border-radius: 12px;
+    background: var(--bg-panel);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    padding: 0;
+}
+
+.command-bar-dialog::backdrop {
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(2px);
+}
+
+.command-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.cmd-icon {
+    font-size: 1.2rem;
+    color: var(--accent-primary);
+    margin-right: 1rem;
+    font-weight: bold;
+}
+
+#cmd-input {
+    flex: 1;
+    border: none;
+    background: none;
+    font-size: 1.2rem;
+    color: var(--text-main);
+    outline: none;
+    font-family: var(--font-body);
+}
+
+.command-hints {
+    padding: 0.75rem 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    background: var(--bg-app);
+}
