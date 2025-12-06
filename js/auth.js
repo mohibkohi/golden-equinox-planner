@@ -1,6 +1,6 @@
 /**
- * Authentication Module (Local)
- * Handles user management using localStorage
+ * Authentication Module (Custom Backend)
+ * Handles user management via /api endpoints
  */
 
 export const auth = {
@@ -26,10 +26,9 @@ export const auth = {
     },
 
     /**
-     * Initialize (Mock for consistency with Firebase interface)
+     * Initialize 
      */
     init() {
-        // No-op for local
         this.notify();
     },
 
@@ -40,29 +39,29 @@ export const auth = {
      * @param {string} name 
      */
     async signup(email, password, name) {
-        // Simulate async
-        return new Promise((resolve, reject) => {
-            const users = JSON.parse(localStorage.getItem('ge_users')) || [];
+        try {
+            const response = await fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, name })
+            });
 
-            if (users.find(u => u.email === email)) {
-                reject(new Error('User already exists'));
-                return;
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Signup failed');
             }
 
-            const newUser = {
-                id: 'user_' + Date.now(),
-                email,
-                password, // Mock: In real app use encryption
-                name,
-                createdAt: new Date().toISOString()
-            };
-
-            users.push(newUser);
-            localStorage.setItem('ge_users', JSON.stringify(users));
-
-            // Auto login
-            this.login(email, password).then(resolve).catch(reject);
-        });
+            // Auto-login logic included in backend response if needed, 
+            // but for now we follow up with immediate login or just use the user object
+            this.state.currentUser = data.user;
+            localStorage.setItem('ge_user', JSON.stringify(data.user));
+            this.notify();
+            return data.user;
+        } catch (error) {
+            console.error("Signup Error:", error);
+            throw error;
+        }
     },
 
     /**
@@ -71,24 +70,27 @@ export const auth = {
      * @param {string} password 
      */
     async login(email, password) {
-        return new Promise((resolve, reject) => {
-            const users = JSON.parse(localStorage.getItem('ge_users')) || [];
-            const user = users.find(u => u.email === email && u.password === password);
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-            if (!user) {
-                reject(new Error('Invalid credentials'));
-                return;
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
             }
 
-            // Create session user
-            const sessionUser = { ...user };
-            delete sessionUser.password;
-
-            this.state.currentUser = sessionUser;
-            localStorage.setItem('ge_user', JSON.stringify(sessionUser));
+            this.state.currentUser = data.user;
+            localStorage.setItem('ge_user', JSON.stringify(data.user));
             this.notify();
-            resolve(sessionUser);
-        });
+            return data.user;
+        } catch (error) {
+            console.error("Login Error:", error);
+            throw error;
+        }
     },
 
     /**
