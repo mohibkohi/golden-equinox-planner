@@ -205,3 +205,74 @@ body {
     font-size: 0.85rem;
     background: var(--bg-app);
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    /* Stack the main layout */
+    .main-layout {
+        flex-direction: column;
+    }
+
+    /* Convert sidebar to top scrolling nav */
+    .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+        padding: 1rem;
+        flex-direction: row;
+        align-items: center;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+    }
+
+    /* Hide focus button on mobile or make it smaller if needed */
+    .focus-control {
+        display: none; /* Simplify for MVP mobile */
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .nav-item {
+        margin-bottom: 0;
+        width: auto;
+        flex: 0 0 auto; /* Don't shrink */
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    /* Content adjustments */
+    .content-area {
+        padding: 1rem;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .toolbar .btn-primary {
+        width: 100%; /* Full width button for better touch target */
+    }
+
+    /* Command Bar adjustments */
+    .command-bar-dialog {
+        width: 90%;
+        top: 10%;
+    }
+
+    /* Text resizing */
+    .app-header h1 {
+        font-size: 1.2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+}
